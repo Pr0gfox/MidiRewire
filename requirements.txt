@@ -1,1 +1,2 @@
-pretty_midi=0.2.10
+pretty_midi==0.2.10
+customtkinter==5.2.2

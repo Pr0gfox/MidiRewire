@@ -1,7 +1,7 @@
 import pretty_midi
 import json
 
-class MidiRevire():
+class MidiRewire():
     def __init__(self) -> None:
         self.midi_data = None
         self.pitch_map = {}
@@ -19,7 +19,6 @@ class MidiRevire():
 
         for dest in json_data:
             for source in json_data[dest]:
-                print("source:", source, "dest:", dest)
                 self.pitch_map[source]=dest
 
     def process(self) -> None:
@@ -30,8 +29,8 @@ class MidiRevire():
 
 
 if __name__ == "__main__":
-    mr = MidiRevire()
-    mr.loadConfig("./config.json")
-    mr.loadMidi("input.mid")
+    mr = MidiRewire()
+    mr.loadConfig("./example/config.json")
+    mr.loadMidi("./input.mid")
     mr.process()
-    mr.saveMidi("output.mid")
+    mr.saveMidi("./output.mid")
