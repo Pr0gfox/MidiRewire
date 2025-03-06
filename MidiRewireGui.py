@@ -1,16 +1,52 @@
 import customtkinter
-from MidiRewire import MidiRewire
+import MidiRewire
 import pretty_midi
+
+ALL_MIDI_VALS_STR  = [str(x) for x in range(128)]
+ALL_MIDI_NAMES_STR = [pretty_midi.note_number_to_name(x) for x in range(128)]
+ALL_MIDI_DRUMS_STR = [pretty_midi.note_number_to_drum_name(x) for x in range(128)]
+
+class MidiGroupGui(MidiRewire.MidiGroup):
+    def __init__(self, parent, midi_group) -> None:
+        super().__init__(midi_group.output, midi_group.inputs)
+        self.parent      = parent
+        self.frame       = customtkinter.CTkFrame(parent)
+        self.left_frame  = customtkinter.CTkFrame(self.frame, fg_color="transparent")
+        self.right_frame = customtkinter.CTkFrame(self.frame, fg_color="transparent")
+        self.frame.pack(pady=5)
+        self.left_frame.grid(row=0, column=0, padx=15, pady=10)
+        self.right_frame.grid(row=0, column=1, padx=15, pady=10)
+        self.input_boxes = {}
+        for input in self.inputs:
+            self.__addInputBox(input)
+        self.output_box = customtkinter.CTkComboBox(self.right_frame, values=ALL_MIDI_DRUMS_STR)
+        self.output_box.set(pretty_midi.note_number_to_drum_name(int(self.output)))
+        self.output_box.pack()
+
+    def addInput(self, input) -> None:
+        self.inputs.append(input)
+        self.__addInputBox(input)
+
+    def __addInputBox(self, input) -> None:
+        self.input_boxes[input] = customtkinter.CTkComboBox(self.left_frame, values=ALL_MIDI_NAMES_STR)
+        self.input_boxes[input].set(pretty_midi.note_number_to_name(int(input)))
+        self.input_boxes[input].pack(pady=5)
+
+    def removeInput(self, input) -> None:
+        self.input_boxes[input].destroy()
+        del self.input_boxes[input]
+        self.inputs.remove(input)
+
+    def destroy(self):
+        self.frame.destroy()
+
 
 class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
         # Midi data
-        self.midi = MidiRewire()
-        self.all_midi_vals_str  = [str(x) for x in range(128)]
-        self.all_midi_notes_str = [pretty_midi.note_number_to_name(x) for x in range(128)]
-        self.all_midi_drums_str = [pretty_midi.note_number_to_drum_name(x) for x in range(128)]
+        self.midi = MidiRewire.MidiRewire()
 
         # Configure window
         self.title("MidiRewire")
@@ -37,43 +73,22 @@ class App(customtkinter.CTk):
         self.scrollable_frame = customtkinter.CTkScrollableFrame(self, label_text="Before --> After    ", fg_color="transparent", label_font=customtkinter.CTkFont(size=16, weight="bold"))
         self.scrollable_frame.grid(row=0, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.scrollable_frame.grid_columnconfigure(0, weight=1)
-        self.midi_boxes = []
 
     def openConfigDialogEvent(self):
         file = customtkinter.filedialog.askopenfile()
         if (file is not None):
-            # TODO: Create reset function that also clears the widget itself
-            self.midi_boxes = []
-            self.scrollable_subframes = []
-
+            # Load config and convert items
             self.midi.loadConfig(file.name)
-            
-            prev_val = None 
-            for key, val in self.midi.pitch_map.items():
-                # Create new group
-                if val != prev_val:
-                    # TODO: Create class for remap group
-                    self.scrollable_subframes.append(customtkinter.CTkFrame(self.scrollable_frame))
-                    self.scrollable_subframes[-1].pack(pady=5)
-                    self.scrollable_subframes[-1].left  = customtkinter.CTkFrame(self.scrollable_subframes[-1], fg_color="transparent")
-                    self.scrollable_subframes[-1].right = customtkinter.CTkFrame(self.scrollable_subframes[-1], fg_color="transparent")
-                    self.scrollable_subframes[-1].left.grid(row=0, column=0, padx=15, pady=10)
-                    self.scrollable_subframes[-1].right.grid(row=0, column=1, padx=15, pady=10)
-                    # Add right side note
-                    self.midi_boxes.append(customtkinter.CTkComboBox(self.scrollable_subframes[-1].right, values=self.all_midi_notes_str))    
-                    self.midi_boxes[-1].set(pretty_midi.note_number_to_drum_name(int(val)))
-                    self.midi_boxes[-1].pack(pady=5)
-                    prev_val = val
-                
-                # Add left side note
-                self.midi_boxes.append(customtkinter.CTkComboBox(self.scrollable_subframes[-1].left, values=self.all_midi_notes_str))
-                self.midi_boxes[-1].set(pretty_midi.note_number_to_name(int(key)))
-                self.midi_boxes[-1].pack(pady=5)
-            
+            for group in self.midi.midi_groups.values():
+                self.midi.midi_groups[group.output] = MidiGroupGui(self.scrollable_frame, group)
+
             # Cannot edit yet --> disable input
-            for box in self.midi_boxes:
-                box.configure(state="readonly")
-                box.configure(values=[])
+            for group in self.midi.midi_groups.values():
+                group.output_box.configure(state="readonly")
+                group.output_box.configure(values=[])
+                for box in group.input_boxes.values():
+                    box.configure(state="readonly")
+                    box.configure(values=[])
 
             print("Config loaded:", file.name)
 

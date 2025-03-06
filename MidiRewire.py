@@ -1,10 +1,15 @@
 import pretty_midi
 import json
 
+class MidiGroup():
+    def __init__(self, output, inputs=[]) -> None:
+        self.inputs = inputs
+        self.output = output
+
 class MidiRewire():
     def __init__(self) -> None:
-        self.midi_data = None
-        self.pitch_map = {}
+        self.midi_data   = None
+        self.midi_groups = {}
 
     def loadMidi(self, path) -> None:
         self.midi_data = pretty_midi.PrettyMIDI(path)
@@ -18,10 +23,15 @@ class MidiRewire():
             json_data = json.load(file)
 
         for dest in json_data:
-            for source in json_data[dest]:
-                self.pitch_map[source]=dest
+            self.midi_groups[dest] = MidiGroup(dest, json_data[dest])
 
     def process(self) -> None:
+        # Create map that's easier to use for processing
+        midi_map = {}
+        for group in self.midi_groups.values():
+            for input in group.inputs:
+                midi_map[input] = group.output
+
         for instrument in self.midi_data.instruments:
             for note in instrument.notes:
                 if note.pitch in list(self.pitch_map.keys()):
