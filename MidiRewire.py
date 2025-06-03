@@ -23,7 +23,8 @@ class MidiRewire():
             json_data = json.load(file)
 
         for dest in json_data:
-            self.midi_groups[dest] = MidiGroup(dest, json_data[dest])
+            dest_num = pretty_midi.drum_name_to_note_number(dest)
+            self.midi_groups[dest_num] = MidiGroup(dest_num, json_data[dest])
 
     def process(self) -> None:
         # Create map that's easier to use for processing
@@ -34,13 +35,13 @@ class MidiRewire():
 
         for instrument in self.midi_data.instruments:
             for note in instrument.notes:
-                if note.pitch in list(self.pitch_map.keys()):
-                    note.pitch = int(self.pitch_map[note.pitch])
+                if note.pitch in list(midi_map.keys()):
+                    note.pitch = int(midi_map[note.pitch])
 
 
 if __name__ == "__main__":
     mr = MidiRewire()
-    mr.loadConfig("./example/config.json")
+    mr.loadConfig("./example/ezd_to_general_midi_config.json")
     mr.loadMidi("./input.mid")
     mr.process()
     mr.saveMidi("./output.mid")
